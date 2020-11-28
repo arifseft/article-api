@@ -23,6 +23,8 @@ func NewElasticArticleRepository(Client *elastic.Client) domain.ArticleRepositor
 }
 
 func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, author string) (res []domain.Article, err error) {
+	e.indexCheck(ctx, index)
+
 	searchSource := elastic.NewSearchSource()
 
 	if query != "" {
@@ -53,18 +55,7 @@ func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, auth
 }
 
 func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article) (err error) {
-	exist, err := e.Client.IndexExists(index).Do(ctx)
-	if err != nil {
-		log.Fatalf("IndexExists() ERROR: %v", err)
-		return
-
-	} else if !exist {
-		createdIndex := e.Client.CreateIndex(index)
-		if createdIndex == nil {
-			log.Fatalf("CreateIndex() ERROR: %v", err)
-			return
-		}
-	}
+	e.indexCheck(ctx, index)
 
 	var id string = "article_" + strconv.Itoa(int(a.ID))
 
@@ -80,4 +71,20 @@ func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article)
 	}
 
 	return
+}
+
+func (e *elasticArticleRepository) indexCheck(ctx context.Context, index string) (bool, error) {
+	exist, err := e.Client.IndexExists(index).Do(ctx)
+	if err != nil {
+		log.Fatalf("IndexExists() ERROR: %v", err)
+		return false, err
+
+	} else if !exist {
+		createdIndex := e.Client.CreateIndex(index)
+		if createdIndex == nil {
+			log.Fatalf("CreateIndex() ERROR: %v", err)
+			return false, err
+		}
+	}
+	return true, nil
 }

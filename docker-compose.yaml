@@ -3,7 +3,7 @@ version: '3.7'
 services: 
   app:
     hostname: article_api_development
-    container_name: article_api_development
+    container_name: article_api_app
     depends_on: 
       - mysql
       - es01
