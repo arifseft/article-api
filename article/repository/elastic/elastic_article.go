@@ -36,11 +36,11 @@ func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, auth
 		searchSource.Query(elastic.NewMatchQuery("author", author))
 	}
 
-	searchService := e.Client.Search().Index(index).SearchSource(searchSource)
+	searchService := e.Client.Search().Index(index).SearchSource(searchSource).SortBy(elastic.NewFieldSort("created_at").Desc())
 
 	searchResult, err := searchService.Do(ctx)
 	if err != nil {
-		log.Fatalf("SearchSource() ERROR: %v", err)
+		log.Printf("SearchSource() ERROR: %v", err)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article)
 		Do(ctx)
 
 	if err != nil {
-		log.Fatalf("client.Index() ERROR: %v", err)
+		log.Printf("client.Index() ERROR: %v", err)
 	}
 
 	return
@@ -76,13 +76,13 @@ func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article)
 func (e *elasticArticleRepository) indexCheck(ctx context.Context, index string) (bool, error) {
 	exist, err := e.Client.IndexExists(index).Do(ctx)
 	if err != nil {
-		log.Fatalf("IndexExists() ERROR: %v", err)
+		log.Printf("IndexExists() ERROR: %v", err)
 		return false, err
 
 	} else if !exist {
 		createdIndex := e.Client.CreateIndex(index)
 		if createdIndex == nil {
-			log.Fatalf("CreateIndex() ERROR: %v", err)
+			log.Printf("CreateIndex() ERROR: %v", err)
 			return false, err
 		}
 	}
