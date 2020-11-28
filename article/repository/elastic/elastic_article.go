@@ -2,85 +2,83 @@ package elastic
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
-	"strings"
+	"log"
+	"reflect"
+	"strconv"
 
 	"github.com/arifseft/article-api/domain"
-	"github.com/sirupsen/logrus"
+	"github.com/olivere/elastic/v7"
 )
 
 type elasticArticleRepository struct {
-	Conn *sql.DB
+	Client *elastic.Client
 }
 
-func NewElasticArticleRepository(Conn *sql.DB) domain.ArticleRepository {
-	return &elasticArticleRepository{Conn}
+const (
+	index = "article"
+)
+
+func NewElasticArticleRepository(Client *elastic.Client) domain.ArticleRepository {
+	return &elasticArticleRepository{Client}
 }
 
-func (e *elasticArticleRepository) Fetch(ctx context.Context, keyword string, author string) (res []domain.Article, err error) {
-	query := `SELECT id, title, body, author, created_at FROM articles `
+func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, author string) (res []domain.Article, err error) {
+	searchSource := elastic.NewSearchSource()
 
-	var whereQuery []string
-	if keyword != "" {
-		whereQuery = append(whereQuery, fmt.Sprintf("(title LIKE '%%%s%%' OR body LIKE '%%%s%%') ", keyword, keyword))
+	if query != "" {
+		searchSource.Query(elastic.NewMatchQuery("title", query))
+		searchSource.Query(elastic.NewMatchQuery("body", query))
 	}
+
 	if author != "" {
-		whereQuery = append(whereQuery, fmt.Sprintf("author LIKE '%%%s%%' ", author))
+		searchSource.Query(elastic.NewMatchQuery("author", author))
 	}
-	if len(whereQuery) > 0 {
-		query += " WHERE " + strings.Join(whereQuery, " AND ")
-	}
-	query += ` ORDER BY created_at DESC`
-	// fmt.Printf("\nValue of  ========================================== : %v\n", )
 
-	// res, err = e.fetch(ctx, query, keyword, keyword, author)
+	searchService := e.Client.Search().Index(index).SearchSource(searchSource)
 
-	rows, err := e.Conn.QueryContext(ctx, query)
+	searchResult, err := searchService.Do(ctx)
 	if err != nil {
-		return nil, err
+		log.Println("[ProductsES][GetPIds]Error=", err)
+		return
 	}
 
-	defer func() {
-		errRow := rows.Close()
-		if errRow != nil {
-			logrus.Error(errRow)
+	var article domain.Article
+	for _, item := range searchResult.Each(reflect.TypeOf(article)) {
+		if t, ok := item.(domain.Article); ok {
+			res = append(res, t)
 		}
-	}()
-	if err != nil {
-		return nil, err
-	}
 
-	for rows.Next() {
-		t := domain.Article{}
-		err = rows.Scan(
-			&t.ID,
-			&t.Title,
-			&t.Body,
-			&t.Author,
-			&t.CreatedAt,
-		)
-		res = append(res, t)
 	}
 
 	return
 }
 
 func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article) (err error) {
-	query := `INSERT articles SET title=? , body=? , author=?, created_at=?`
-	stmt, err := e.Conn.PrepareContext(ctx, query)
+	exist, err := e.Client.IndexExists(index).Do(ctx)
 	if err != nil {
+		log.Fatalf("IndexExists() ERROR: %v", err)
 		return
+
+	} else if !exist {
+		createdIndex := e.Client.CreateIndex(index)
+		if createdIndex == nil {
+			log.Fatalf("CreateIndex() ERROR: %v", err)
+			return
+		}
 	}
 
-	res, err := stmt.ExecContext(ctx, a.Title, a.Body, a.Author, a.CreatedAt)
+	var id string = "article_" + strconv.Itoa(int(a.ID))
+
+	_, err = e.Client.Index().
+		Index(index).
+		Type("_doc").
+		BodyJson(a).
+		Id(id).
+		Do(ctx)
+
 	if err != nil {
-		return
+		log.Fatalf("client.Index() ERROR: %v", err)
 	}
-	lastID, err := res.LastInsertId()
-	if err != nil {
-		return
-	}
-	a.ID = lastID
+
 	return
 }

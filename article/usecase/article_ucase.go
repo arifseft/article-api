@@ -39,5 +39,6 @@ func (a *articleUsecase) Store(c context.Context, m *domain.Article) (err error)
 	m.CreatedAt = time.Now()
 
 	err = a.articleMysqlRepo.Store(ctx, m)
+	err = a.articleElasticRepo.Store(ctx, m)
 	return
 }

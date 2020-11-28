@@ -12,5 +12,8 @@
       "user": "root",
       "pass": "12345678",
       "name": "articles"
+  },
+  "elasticsearch": {
+	  "host": "http://localhost:9200"
   }
 }

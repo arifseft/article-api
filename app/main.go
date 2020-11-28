@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
+	"github.com/olivere/elastic/v7"
 	"github.com/spf13/viper"
 
 	_articleHttpDelivery "github.com/arifseft/article-api/article/delivery/http"
@@ -51,6 +52,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	esHost := viper.GetString(`elasticsearch.host`)
+	elasticClient, err := elastic.NewClient(
+		elastic.SetSniff(true),
+		elastic.SetURL(esHost),
+		elastic.SetHealthcheckInterval(5*time.Second), // quit trying after 5 seconds
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	defer func() {
 		err := dbConn.Close()
 		if err != nil {
@@ -62,7 +74,7 @@ func main() {
 	middL := _articleHttpDeliveryMiddleware.InitMiddleware()
 	e.Use(middL.CORS)
 	mysqlArticleRepository := _articleMysqlRepo.NewMysqlArticleRepository(dbConn)
-	elasticArticleRepository := _articleElasticRepo.NewElasticArticleRepository(dbConn)
+	elasticArticleRepository := _articleElasticRepo.NewElasticArticleRepository(elasticClient)
 
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
 	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, timeoutContext)
