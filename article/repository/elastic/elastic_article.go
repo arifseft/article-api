@@ -38,7 +38,7 @@ func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, auth
 
 	searchResult, err := searchService.Do(ctx)
 	if err != nil {
-		log.Println("[ProductsES][GetPIds]Error=", err)
+		log.Fatalf("SearchSource() ERROR: %v", err)
 		return
 	}
 
@@ -47,7 +47,6 @@ func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, auth
 		if t, ok := item.(domain.Article); ok {
 			res = append(res, t)
 		}
-
 	}
 
 	return
