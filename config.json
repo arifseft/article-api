@@ -7,13 +7,13 @@
     "timeout":2
   },
   "database": {
-      "host": "localhost",
-      "port": "3306",
+      "host": "mysql",
+      "port": "3307",
       "user": "root",
       "pass": "12345678",
-      "name": "articles"
+      "name": "db_articles"
   },
   "elasticsearch": {
-	  "host": "http://localhost:9200"
+	  "host": "http://es01:9200"
   }
 }
