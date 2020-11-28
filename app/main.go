@@ -13,7 +13,8 @@ import (
 
 	_articleHttpDelivery "github.com/arifseft/article-api/article/delivery/http"
 	_articleHttpDeliveryMiddleware "github.com/arifseft/article-api/article/delivery/http/middleware"
-	_articleRepo "github.com/arifseft/article-api/article/repository/mysql"
+	_articleElasticRepo "github.com/arifseft/article-api/article/repository/elastic"
+	_articleMysqlRepo "github.com/arifseft/article-api/article/repository/mysql"
 	_articleUcase "github.com/arifseft/article-api/article/usecase"
 )
 
@@ -60,10 +61,11 @@ func main() {
 	e := echo.New()
 	middL := _articleHttpDeliveryMiddleware.InitMiddleware()
 	e.Use(middL.CORS)
-	ar := _articleRepo.NewMysqlArticleRepository(dbConn)
+	mysqlArticleRepository := _articleMysqlRepo.NewMysqlArticleRepository(dbConn)
+	elasticArticleRepository := _articleElasticRepo.NewElasticArticleRepository(dbConn)
 
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
-	au := _articleUcase.NewArticleUsecase(ar, timeoutContext)
+	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, timeoutContext)
 	_articleHttpDelivery.NewArticleHandler(e, au)
 
 	log.Fatal(e.Start(viper.GetString("server.address")))

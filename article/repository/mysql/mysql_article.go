@@ -18,41 +18,6 @@ func NewMysqlArticleRepository(Conn *sql.DB) domain.ArticleRepository {
 	return &mysqlArticleRepository{Conn}
 }
 
-func (m *mysqlArticleRepository) fetch(ctx context.Context, q string, args ...interface{}) (result []domain.Article, err error) {
-	rows, err := m.Conn.QueryContext(ctx, q, args...)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-
-	defer func() {
-		errRow := rows.Close()
-		if errRow != nil {
-			logrus.Error(errRow)
-		}
-	}()
-
-	result = make([]domain.Article, 0)
-	for rows.Next() {
-		t := domain.Article{}
-		err = rows.Scan(
-			&t.ID,
-			&t.Title,
-			&t.Body,
-			&t.Author,
-			&t.CreatedAt,
-		)
-
-		if err != nil {
-			logrus.Error(err)
-			return nil, err
-		}
-		result = append(result, t)
-	}
-
-	return result, nil
-}
-
 func (m *mysqlArticleRepository) Fetch(ctx context.Context, keyword string, author string) (res []domain.Article, err error) {
 	query := `SELECT id, title, body, author, created_at FROM articles `
 
