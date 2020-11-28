@@ -28,11 +28,11 @@ type Response struct {
 }
 
 func (a *ArticleHandler) FetchArticle(c echo.Context) error {
-	keyword := c.QueryParam("query")
+	query := c.QueryParam("query")
 	author := c.QueryParam("author")
 	ctx := c.Request().Context()
 
-	listAr, err := a.AUsecase.Fetch(ctx, keyword, author)
+	listAr, err := a.AUsecase.Fetch(ctx, query, author)
 	if err != nil {
 		errStr := err.Error()
 		return c.JSON(getStatusCode(err), Response{

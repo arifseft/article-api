@@ -16,12 +16,12 @@ type Article struct {
 
 // ArticleUsecase represent the article's usecases
 type ArticleUsecase interface {
-	Fetch(ctx context.Context, keyword string, author string) ([]Article, error)
+	Fetch(ctx context.Context, query string, author string) ([]Article, error)
 	Store(context.Context, *Article) error
 }
 
 // ArticleRepository represent the article's repository contract
 type ArticleRepository interface {
-	Fetch(ctx context.Context, keyword string, author string) (res []Article, err error)
+	Fetch(ctx context.Context, query string, author string) (res []Article, err error)
 	Store(ctx context.Context, a *Article) error
 }

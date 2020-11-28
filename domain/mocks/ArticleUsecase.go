@@ -14,13 +14,13 @@ type ArticleUsecase struct {
 	mock.Mock
 }
 
-// Fetch provides a mock function with given fields: ctx, keyword, author
-func (_m *ArticleUsecase) Fetch(ctx context.Context, keyword string, author string) ([]domain.Article, error) {
-	ret := _m.Called(ctx, keyword, author)
+// Fetch provides a mock function with given fields: ctx, query, author
+func (_m *ArticleUsecase) Fetch(ctx context.Context, query string, author string) ([]domain.Article, error) {
+	ret := _m.Called(ctx, query, author)
 
 	var r0 []domain.Article
 	if rf, ok := ret.Get(0).(func(context.Context, string, string) []domain.Article); ok {
-		r0 = rf(ctx, keyword, author)
+		r0 = rf(ctx, query, author)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]domain.Article)
@@ -29,7 +29,7 @@ func (_m *ArticleUsecase) Fetch(ctx context.Context, keyword string, author stri
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, keyword, author)
+		r1 = rf(ctx, query, author)
 	} else {
 		r1 = ret.Error(1)
 	}

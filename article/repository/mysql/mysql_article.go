@@ -18,25 +18,22 @@ func NewMysqlArticleRepository(Conn *sql.DB) domain.ArticleRepository {
 	return &mysqlArticleRepository{Conn}
 }
 
-func (m *mysqlArticleRepository) Fetch(ctx context.Context, keyword string, author string) (res []domain.Article, err error) {
-	query := `SELECT id, title, body, author, created_at FROM articles `
+func (m *mysqlArticleRepository) Fetch(ctx context.Context, query string, author string) (res []domain.Article, err error) {
+	q := `SELECT id, title, body, author, created_at FROM articles `
 
-	var whereQuery []string
-	if keyword != "" {
-		whereQuery = append(whereQuery, fmt.Sprintf("(title LIKE '%%%s%%' OR body LIKE '%%%s%%') ", keyword, keyword))
+	var where []string
+	if query != "" {
+		where = append(where, fmt.Sprintf("(title LIKE '%%%s%%' OR body LIKE '%%%s%%') ", query, query))
 	}
 	if author != "" {
-		whereQuery = append(whereQuery, fmt.Sprintf("author LIKE '%%%s%%' ", author))
+		where = append(where, fmt.Sprintf("author LIKE '%%%s%%' ", author))
 	}
-	if len(whereQuery) > 0 {
-		query += " WHERE " + strings.Join(whereQuery, " AND ")
+	if len(where) > 0 {
+		q += " WHERE " + strings.Join(where, " AND ")
 	}
-	query += ` ORDER BY created_at DESC`
-	// fmt.Printf("\nValue of  ========================================== : %v\n", )
+	q += ` ORDER BY created_at DESC`
 
-	// res, err = m.fetch(ctx, query, keyword, keyword, author)
-
-	rows, err := m.Conn.QueryContext(ctx, query)
+	rows, err := m.Conn.QueryContext(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +64,8 @@ func (m *mysqlArticleRepository) Fetch(ctx context.Context, keyword string, auth
 }
 
 func (m *mysqlArticleRepository) Store(ctx context.Context, a *domain.Article) (err error) {
-	query := `INSERT articles SET title=? , body=? , author=?, created_at=?`
-	stmt, err := m.Conn.PrepareContext(ctx, query)
+	q := `INSERT articles SET title=? , body=? , author=?, created_at=?`
+	stmt, err := m.Conn.PrepareContext(ctx, q)
 	if err != nil {
 		return
 	}
