@@ -18,5 +18,10 @@
   },
   "nats": {
 	  "host": "nats://nats01:4222"
+  },
+  "redis": {
+	  "host": "redis:6379",
+	  "db": 0,
+	  "pass": ""
   }
 }

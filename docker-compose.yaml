@@ -6,7 +6,9 @@ services:
     container_name: article_api_app
     depends_on: 
       - mysql
+      - redis
       - es01
+      - nats01
     restart: unless-stopped
     build: 
       context: .
@@ -38,6 +40,20 @@ services:
       - MYSQL_TCP_PORT=3307
     ports:
       - 3307:3307
+    networks:
+      - article_api_development
+
+  redis:
+    image: redis:6.0.9
+    container_name: article_api_redis
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    volumes:
+      - redis_data:/data
+    ports:
+      - 6377:6377
     networks:
       - article_api_development
 
@@ -129,6 +145,7 @@ services:
 
 volumes: 
   article_api:
+  redis_data:
   data01:
   data02:
   data03:

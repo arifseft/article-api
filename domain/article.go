@@ -31,3 +31,9 @@ type ArticleEvent interface {
 	PublishArticleCreated(ctx context.Context, a Article) (err error)
 	SubscribeArticleCreated(ctx context.Context, f func(Article)) (err error)
 }
+
+// ArticleCache represent the article's cache
+type ArticleCache interface {
+	GetCache(ctx context.Context, key string) (data interface{}, err error)
+	SetCache(ctx context.Context, key string, value interface{}) (err error)
+}

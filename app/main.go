@@ -7,12 +7,14 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 	"github.com/nats-io/nats.go"
 	"github.com/olivere/elastic/v7"
 	"github.com/spf13/viper"
 
+	_articleRedisCache "github.com/arifseft/article-api/article/cache/redis"
 	_articleHttpDelivery "github.com/arifseft/article-api/article/delivery/http"
 	_articleHttpDeliveryMiddleware "github.com/arifseft/article-api/article/delivery/http/middleware"
 	_articleNatsEvent "github.com/arifseft/article-api/article/event/nats"
@@ -68,6 +70,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Connect to Redis
+	rdClient := redis.NewClient(&redis.Options{
+		Addr:     viper.GetString(`redis.host`),
+		DB:       viper.GetInt(`redis.db`),
+		Password: viper.GetString(`redis.pass`),
+	})
+
 	// Connect to NATS
 	natsHost := viper.GetString(`nats.host`)
 	natsConn, err := nats.Connect(natsHost)
@@ -80,7 +89,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
+		err = rdClient.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
 		natsConn.Close()
 	}()
 
@@ -90,9 +102,10 @@ func main() {
 	mysqlArticleRepository := _articleMysqlRepo.NewMysqlArticleRepository(dbConn)
 	elasticArticleRepository := _articleElasticRepo.NewElasticArticleRepository(elasticClient)
 	natsArticleEvent := _articleNatsEvent.NewNatsArticleEvent(natsConn)
+	redisArticleCache := _articleRedisCache.NewRedisCache(rdClient)
 
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
-	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, natsArticleEvent, timeoutContext)
+	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, natsArticleEvent, redisArticleCache, timeoutContext)
 	_articleHttpDelivery.NewArticleHandler(e, au)
 
 	ConsumeArticleCreated(natsArticleEvent, elasticArticleRepository)
