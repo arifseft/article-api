@@ -14,31 +14,8 @@ type ArticleRepository struct {
 	mock.Mock
 }
 
-// Fetch provides a mock function with given fields: ctx, query, author
-func (_m *ArticleRepository) Fetch(ctx context.Context, query string, author string) ([]domain.Article, error) {
-	ret := _m.Called(ctx, query, author)
-
-	var r0 []domain.Article
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []domain.Article); ok {
-		r0 = rf(ctx, query, author)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.Article)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, query, author)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Store provides a mock function with given fields: ctx, a
-func (_m *ArticleRepository) Store(ctx context.Context, a *domain.Article) error {
+// StoreArticle provides a mock function with given fields: ctx, a
+func (_m *ArticleRepository) StoreArticle(ctx context.Context, a *domain.Article) error {
 	ret := _m.Called(ctx, a)
 
 	var r0 error

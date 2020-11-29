@@ -28,11 +28,19 @@ type Response struct {
 }
 
 func (a *ArticleHandler) FetchArticle(c echo.Context) error {
+	ctx := c.Request().Context()
 	query := c.QueryParam("query")
 	author := c.QueryParam("author")
-	ctx := c.Request().Context()
 
-	listAr, err := a.AUsecase.Fetch(ctx, query, author)
+	payload := domain.ArticleSearchPayload{}
+	if query != "" {
+		payload.Query = &query
+	}
+	if author != "" {
+		payload.Author = &author
+	}
+
+	listAr, err := a.AUsecase.GetArticles(ctx, payload)
 	if err != nil {
 		errStr := err.Error()
 		return c.JSON(getStatusCode(err), Response{
@@ -69,7 +77,7 @@ func (a *ArticleHandler) Store(c echo.Context) (err error) {
 	}
 
 	ctx := c.Request().Context()
-	err = a.AUsecase.Store(ctx, &article)
+	err = a.AUsecase.AddArticle(ctx, &article)
 	if err != nil {
 		errStr := err.Error()
 		return c.JSON(getStatusCode(err), Response{

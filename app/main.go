@@ -18,8 +18,8 @@ import (
 	_articleHttpDelivery "github.com/arifseft/article-api/article/delivery/http"
 	_articleHttpDeliveryMiddleware "github.com/arifseft/article-api/article/delivery/http/middleware"
 	_articleNatsEvent "github.com/arifseft/article-api/article/event/nats"
-	_articleElasticRepo "github.com/arifseft/article-api/article/repository/elastic"
 	_articleMysqlRepo "github.com/arifseft/article-api/article/repository/mysql"
+	_articleElasticSearch "github.com/arifseft/article-api/article/search/elastic"
 	_articleUcase "github.com/arifseft/article-api/article/usecase"
 )
 
@@ -100,15 +100,15 @@ func main() {
 	middL := _articleHttpDeliveryMiddleware.InitMiddleware()
 	e.Use(middL.CORS)
 	mysqlArticleRepository := _articleMysqlRepo.NewMysqlArticleRepository(dbConn)
-	elasticArticleRepository := _articleElasticRepo.NewElasticArticleRepository(elasticClient)
+	elasticArticleSearch := _articleElasticSearch.NewElasticArticleSearch(elasticClient)
 	natsArticleEvent := _articleNatsEvent.NewNatsArticleEvent(natsConn)
 	redisArticleCache := _articleRedisCache.NewRedisCache(rdClient)
 
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
-	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, natsArticleEvent, redisArticleCache, timeoutContext)
+	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleSearch, natsArticleEvent, redisArticleCache, timeoutContext)
 	_articleHttpDelivery.NewArticleHandler(e, au)
 
-	ConsumeArticleCreated(natsArticleEvent, elasticArticleRepository)
+	ConsumeArticleCreated(natsArticleEvent, elasticArticleSearch)
 
 	log.Fatal(e.Start(viper.GetString("server.address")))
 }

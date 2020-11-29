@@ -1,4 +1,4 @@
-package elastic
+package search
 
 import (
 	"context"
@@ -15,24 +15,24 @@ const (
 	index = "article"
 )
 
-type elasticArticleRepository struct {
+type elasticArticleSearch struct {
 	Client *elastic.Client
 }
 
-func NewElasticArticleRepository(Client *elastic.Client) domain.ArticleRepository {
-	return &elasticArticleRepository{Client}
+func NewElasticArticleSearch(Client *elastic.Client) domain.ArticleSearch {
+	return &elasticArticleSearch{Client}
 }
 
-func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, author string) (res []domain.Article, err error) {
+func (e *elasticArticleSearch) SearchArticle(ctx context.Context, payload domain.ArticleSearchPayload) (res []domain.Article, err error) {
 	if err := e.indexCheck(ctx, index); err != nil {
 		return res, err
 	}
 
 	var shouldQuery []elastic.Query
 
-	if query != "" {
+	if payload.Query != nil {
 		var queryQ *elastic.BoolQuery
-		wildcard := "*" + strings.ToLower(query) + "*"
+		wildcard := "*" + strings.ToLower(*payload.Query) + "*"
 		queryQ = elastic.NewBoolQuery()
 		queryQ.Should(elastic.NewWildcardQuery("title", wildcard))
 		queryQ.Should(elastic.NewWildcardQuery("body", wildcard))
@@ -40,10 +40,10 @@ func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, auth
 		shouldQuery = append(shouldQuery, queryQ)
 	}
 
-	if author != "" {
+	if payload.Author != nil {
 		var authorQ *elastic.BoolQuery
 		authorQ = elastic.NewBoolQuery()
-		authorQ.Must(elastic.NewMatchQuery("author", strings.ToLower(author)))
+		authorQ.Must(elastic.NewMatchQuery("author", strings.ToLower(*payload.Author)))
 
 		shouldQuery = append(shouldQuery, authorQ)
 	}
@@ -71,7 +71,7 @@ func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, auth
 	return
 }
 
-func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article) (err error) {
+func (e *elasticArticleSearch) IndexArticle(ctx context.Context, a *domain.Article) (err error) {
 	e.indexCheck(ctx, index)
 
 	var id string = "article_" + strconv.Itoa(int(a.ID))
@@ -90,7 +90,7 @@ func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article)
 	return
 }
 
-func (e *elasticArticleRepository) indexCheck(ctx context.Context, index string) error {
+func (e *elasticArticleSearch) indexCheck(ctx context.Context, index string) error {
 	exist, err := e.Client.IndexExists(index).Do(ctx)
 	if err != nil {
 		log.Printf("IndexExists() ERROR: %v", err)

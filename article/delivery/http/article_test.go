@@ -29,7 +29,11 @@ func TestFetch(t *testing.T) {
 	mockListArticle = append(mockListArticle, mockArticle)
 	query := "Abc"
 	author := "John"
-	mockUCase.On("Fetch", context.TODO(), query, author).Return(mockListArticle, nil)
+	payload := domain.ArticleSearchPayload{
+		Query:  &query,
+		Author: &author,
+	}
+	mockUCase.On("GetArticles", context.TODO(), payload).Return(mockListArticle, nil)
 
 	e := echo.New()
 	req, err := http.NewRequest(echo.GET, "/article?query="+query+"&author="+author, strings.NewReader(""))
@@ -51,7 +55,11 @@ func TestFetchError(t *testing.T) {
 	mockUCase := new(mocks.ArticleUsecase)
 	query := "1"
 	author := "John"
-	mockUCase.On("Fetch", context.TODO(), query, author).Return(nil, domain.ErrInternalServerError)
+	payload := domain.ArticleSearchPayload{
+		Query:  &query,
+		Author: &author,
+	}
+	mockUCase.On("GetArticles", context.TODO(), payload).Return(nil, domain.ErrInternalServerError)
 
 	e := echo.New()
 	req, err := http.NewRequest(echo.GET, "/article?query=1&author="+author, strings.NewReader(""))
@@ -84,7 +92,7 @@ func TestStore(t *testing.T) {
 	j, err := json.Marshal(tempMockArticle)
 	assert.NoError(t, err)
 
-	mockUCase.On("Store", context.TODO(), mock.AnythingOfType("*domain.Article")).Return(nil)
+	mockUCase.On("AddArticle", context.TODO(), mock.AnythingOfType("*domain.Article")).Return(nil)
 
 	e := echo.New()
 	req, err := http.NewRequest(echo.POST, "/article", strings.NewReader(string(j)))

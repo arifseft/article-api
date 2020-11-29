@@ -10,41 +10,41 @@ import (
 )
 
 type articleUsecase struct {
-	articleMysqlRepo   domain.ArticleRepository
-	articleElasticRepo domain.ArticleRepository
-	articleNatsEvent   domain.ArticleEvent
-	articleRedisCache  domain.ArticleCache
-	contextTimeout     time.Duration
+	articleMysqlRepo     domain.ArticleRepository
+	articleElasticSearch domain.ArticleSearch
+	articleNatsEvent     domain.ArticleEvent
+	articleRedisCache    domain.ArticleCache
+	contextTimeout       time.Duration
 }
 
 func NewArticleUsecase(
 	articleMysqlRepository domain.ArticleRepository,
-	articleElasticRepository domain.ArticleRepository,
+	articleElasticSearch domain.ArticleSearch,
 	articleNatsEvent domain.ArticleEvent,
 	articleRedisCache domain.ArticleCache,
 	timeout time.Duration,
 ) domain.ArticleUsecase {
 	return &articleUsecase{
-		articleMysqlRepo:   articleMysqlRepository,
-		articleElasticRepo: articleElasticRepository,
-		articleNatsEvent:   articleNatsEvent,
-		articleRedisCache:  articleRedisCache,
-		contextTimeout:     timeout,
+		articleMysqlRepo:     articleMysqlRepository,
+		articleElasticSearch: articleElasticSearch,
+		articleNatsEvent:     articleNatsEvent,
+		articleRedisCache:    articleRedisCache,
+		contextTimeout:       timeout,
 	}
 }
 
-func (a *articleUsecase) Fetch(c context.Context, query string, author string) (res []domain.Article, err error) {
+func (a *articleUsecase) GetArticles(c context.Context, payload domain.ArticleSearchPayload) (res []domain.Article, err error) {
 	ctx, cancel := context.WithTimeout(c, a.contextTimeout)
 	defer cancel()
 
 	// Get cache
 	var keys []string
 	keys = append(keys, "article")
-	if author != "" {
-		keys = append(keys, author)
+	if payload.Author != nil {
+		keys = append(keys, *payload.Author)
 	}
-	if query != "" {
-		keys = append(keys, query)
+	if payload.Query != nil {
+		keys = append(keys, *payload.Query)
 	}
 	cacheKey := strings.Join(keys, ":")
 	cacheValue, err := a.articleRedisCache.GetCache(ctx, cacheKey)
@@ -58,7 +58,7 @@ func (a *articleUsecase) Fetch(c context.Context, query string, author string) (
 			return nil, err
 		}
 	} else {
-		res, err = a.articleElasticRepo.Fetch(ctx, query, author)
+		res, err = a.articleElasticSearch.SearchArticle(ctx, payload)
 		if err != nil {
 			return nil, err
 		}
@@ -77,12 +77,12 @@ func (a *articleUsecase) Fetch(c context.Context, query string, author string) (
 	return
 }
 
-func (a *articleUsecase) Store(c context.Context, m *domain.Article) (err error) {
+func (a *articleUsecase) AddArticle(c context.Context, m *domain.Article) (err error) {
 	ctx, cancel := context.WithTimeout(c, a.contextTimeout)
 	defer cancel()
 	m.CreatedAt = time.Now()
 
-	err = a.articleMysqlRepo.Store(ctx, m)
+	err = a.articleMysqlRepo.StoreArticle(ctx, m)
 
 	// Publish event
 	err = a.articleNatsEvent.PublishArticleCreated(ctx, *m)
