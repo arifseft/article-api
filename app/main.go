@@ -108,7 +108,7 @@ func main() {
 	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleSearch, natsArticleEvent, redisArticleCache, timeoutContext)
 	_articleHttpDelivery.NewArticleHandler(e, au)
 
-	ConsumeArticleCreated(natsArticleEvent, elasticArticleSearch)
+	ConsumeArticleCreated(natsArticleEvent, elasticArticleSearch, redisArticleCache)
 
 	log.Fatal(e.Start(viper.GetString("server.address")))
 }

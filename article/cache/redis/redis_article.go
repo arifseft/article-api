@@ -38,3 +38,11 @@ func (r *redisArticleCache) SetCache(ctx context.Context, key string, value inte
 	}
 	return
 }
+
+func (r *redisArticleCache) FlushAllCache(ctx context.Context) (err error) {
+	err = r.Client.FlushAll().Err()
+	if err != nil {
+		return err
+	}
+	return
+}

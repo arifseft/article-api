@@ -9,10 +9,13 @@ import (
 	"github.com/tinrab/retry"
 )
 
-func ConsumeArticleCreated(natsArticleEvent domain.ArticleEvent, elasticArticleSearch domain.ArticleSearch) (err error) {
+func ConsumeArticleCreated(natsArticleEvent domain.ArticleEvent, elasticArticleSearch domain.ArticleSearch, redisArticleCache domain.ArticleCache) (err error) {
 	retry.ForeverSleep(2*time.Second, func(_ int) error {
 		err = natsArticleEvent.SubscribeArticleCreated(context.Background(), func(m domain.Article) {
 			if err := elasticArticleSearch.IndexArticle(context.Background(), &m); err != nil {
+				log.Println(err)
+			}
+			if err := redisArticleCache.FlushAllCache(context.Background()); err != nil {
 				log.Println(err)
 			}
 		})

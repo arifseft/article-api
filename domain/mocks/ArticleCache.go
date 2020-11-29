@@ -13,6 +13,20 @@ type ArticleCache struct {
 	mock.Mock
 }
 
+// FlushAllCache provides a mock function with given fields: ctx
+func (_m *ArticleCache) FlushAllCache(ctx context.Context) error {
+	ret := _m.Called(ctx)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetCache provides a mock function with given fields: ctx, key
 func (_m *ArticleCache) GetCache(ctx context.Context, key string) (interface{}, error) {
 	ret := _m.Called(ctx, key)

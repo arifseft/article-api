@@ -46,4 +46,5 @@ type ArticleEvent interface {
 type ArticleCache interface {
 	GetCache(ctx context.Context, key string) (interface{}, error)
 	SetCache(ctx context.Context, key string, value interface{}) error
+	FlushAllCache(ctx context.Context) error
 }
