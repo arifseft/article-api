@@ -10,13 +10,20 @@ import (
 type articleUsecase struct {
 	articleMysqlRepo   domain.ArticleRepository
 	articleElasticRepo domain.ArticleRepository
+	articleNatsEvent   domain.ArticleEvent
 	contextTimeout     time.Duration
 }
 
-func NewArticleUsecase(articleMysqlRepository domain.ArticleRepository, articleElasticRepository domain.ArticleRepository, timeout time.Duration) domain.ArticleUsecase {
+func NewArticleUsecase(
+	articleMysqlRepository domain.ArticleRepository,
+	articleElasticRepository domain.ArticleRepository,
+	articleNatsEvent domain.ArticleEvent,
+	timeout time.Duration,
+) domain.ArticleUsecase {
 	return &articleUsecase{
 		articleMysqlRepo:   articleMysqlRepository,
 		articleElasticRepo: articleElasticRepository,
+		articleNatsEvent:   articleNatsEvent,
 		contextTimeout:     timeout,
 	}
 }
@@ -39,6 +46,8 @@ func (a *articleUsecase) Store(c context.Context, m *domain.Article) (err error)
 	m.CreatedAt = time.Now()
 
 	err = a.articleMysqlRepo.Store(ctx, m)
-	err = a.articleElasticRepo.Store(ctx, m)
+
+	// Publish event
+	err = a.articleNatsEvent.PublishArticleCreated(ctx, *m)
 	return
 }

@@ -5,40 +5,57 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/arifseft/article-api/domain"
 	"github.com/olivere/elastic/v7"
+)
+
+const (
+	index = "article"
 )
 
 type elasticArticleRepository struct {
 	Client *elastic.Client
 }
 
-const (
-	index = "article"
-)
-
 func NewElasticArticleRepository(Client *elastic.Client) domain.ArticleRepository {
 	return &elasticArticleRepository{Client}
 }
 
 func (e *elasticArticleRepository) Fetch(ctx context.Context, query string, author string) (res []domain.Article, err error) {
-	e.indexCheck(ctx, index)
+	if err := e.indexCheck(ctx, index); err != nil {
+		return res, err
+	}
 
-	searchSource := elastic.NewSearchSource()
+	var shouldQuery []elastic.Query
 
 	if query != "" {
-		searchSource.Query(elastic.NewMatchQuery("title", query))
-		searchSource.Query(elastic.NewMatchQuery("body", query))
+		var queryQ *elastic.BoolQuery
+		wildcard := "*" + strings.ToLower(query) + "*"
+		queryQ = elastic.NewBoolQuery()
+		queryQ.Should(elastic.NewWildcardQuery("title", wildcard))
+		queryQ.Should(elastic.NewWildcardQuery("body", wildcard))
+
+		shouldQuery = append(shouldQuery, queryQ)
 	}
 
 	if author != "" {
-		searchSource.Query(elastic.NewMatchQuery("author", author))
+		var authorQ *elastic.BoolQuery
+		authorQ = elastic.NewBoolQuery()
+		authorQ.Must(elastic.NewMatchQuery("author", strings.ToLower(author)))
+
+		shouldQuery = append(shouldQuery, authorQ)
 	}
 
-	searchService := e.Client.Search().Index(index).SearchSource(searchSource).SortBy(elastic.NewFieldSort("created_at").Desc())
+	newBoolQuery := elastic.NewBoolQuery().Must(shouldQuery...)
 
-	searchResult, err := searchService.Do(ctx)
+	searchResult, err := e.Client.Search().
+		Index(index).
+		Query(newBoolQuery).
+		SortBy(elastic.NewFieldSort("created_at").Desc()).
+		Do(ctx)
+
 	if err != nil {
 		log.Printf("SearchSource() ERROR: %v", err)
 		return
@@ -67,24 +84,29 @@ func (e *elasticArticleRepository) Store(ctx context.Context, a *domain.Article)
 		Do(ctx)
 
 	if err != nil {
-		log.Printf("client.Index() ERROR: %v", err)
+		log.Printf("Store() ERROR: %v", err)
 	}
 
 	return
 }
 
-func (e *elasticArticleRepository) indexCheck(ctx context.Context, index string) (bool, error) {
+func (e *elasticArticleRepository) indexCheck(ctx context.Context, index string) error {
 	exist, err := e.Client.IndexExists(index).Do(ctx)
 	if err != nil {
 		log.Printf("IndexExists() ERROR: %v", err)
-		return false, err
+		return err
+	}
 
-	} else if !exist {
-		createdIndex := e.Client.CreateIndex(index)
+	if !exist {
+		createdIndex, err := e.Client.CreateIndex(index).Do(ctx)
+		if err != nil {
+			log.Printf("CreateIndex() ERROR: %v", err)
+			return err
+		}
 		if createdIndex == nil {
 			log.Printf("CreateIndex() ERROR: %v", err)
-			return false, err
+			return err
 		}
 	}
-	return true, nil
+	return nil
 }

@@ -9,11 +9,13 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
+	"github.com/nats-io/nats.go"
 	"github.com/olivere/elastic/v7"
 	"github.com/spf13/viper"
 
 	_articleHttpDelivery "github.com/arifseft/article-api/article/delivery/http"
 	_articleHttpDeliveryMiddleware "github.com/arifseft/article-api/article/delivery/http/middleware"
+	_articleNatsEvent "github.com/arifseft/article-api/article/event/nats"
 	_articleElasticRepo "github.com/arifseft/article-api/article/repository/elastic"
 	_articleMysqlRepo "github.com/arifseft/article-api/article/repository/mysql"
 	_articleUcase "github.com/arifseft/article-api/article/usecase"
@@ -32,6 +34,8 @@ func init() {
 }
 
 func main() {
+	var err error
+	// Connect to MySQL
 	dbHost := viper.GetString(`database.host`)
 	dbPort := viper.GetString(`database.port`)
 	dbUser := viper.GetString(`database.user`)
@@ -52,6 +56,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Connect to ElasticSearch
 	esHost := viper.GetString(`elasticsearch.host`)
 	elasticClient, err := elastic.NewClient(
 		elastic.SetSniff(true),
@@ -63,11 +68,20 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Connect to NATS
+	natsHost := viper.GetString(`nats.host`)
+	natsConn, err := nats.Connect(natsHost)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	defer func() {
-		err := dbConn.Close()
+		err = dbConn.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		natsConn.Close()
 	}()
 
 	e := echo.New()
@@ -75,10 +89,13 @@ func main() {
 	e.Use(middL.CORS)
 	mysqlArticleRepository := _articleMysqlRepo.NewMysqlArticleRepository(dbConn)
 	elasticArticleRepository := _articleElasticRepo.NewElasticArticleRepository(elasticClient)
+	natsArticleEvent := _articleNatsEvent.NewNatsArticleEvent(natsConn)
 
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
-	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, timeoutContext)
+	au := _articleUcase.NewArticleUsecase(mysqlArticleRepository, elasticArticleRepository, natsArticleEvent, timeoutContext)
 	_articleHttpDelivery.NewArticleHandler(e, au)
+
+	ConsumeArticleCreated(natsArticleEvent, elasticArticleRepository)
 
 	log.Fatal(e.Start(viper.GetString("server.address")))
 }

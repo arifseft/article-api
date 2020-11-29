@@ -61,6 +61,7 @@ services:
       - 9200:9200
     networks:
       - article_api_development
+
   es02:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
     container_name: article_api_es02
@@ -79,6 +80,7 @@ services:
       - data02:/usr/share/elasticsearch/data
     networks:
       - article_api_development
+
   es03:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
     container_name: article_api_es03
@@ -98,15 +100,38 @@ services:
     networks:
       - article_api_development
 
+  nats01:
+    image: nats:2.1.9
+    container_name: article_api_nats01
+    ports:
+      - "8222:8222"
+    networks:
+      - article_api_development
+
+  nats02:
+    image: nats:2.1.9
+    container_name: article_api_nats02
+    command: "--cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats:6222"
+    networks:
+      - article_api_development
+    depends_on: 
+      - "nats01"
+
+  nats03:
+    image: nats:2.1.9
+    container_name: article_api_nats03
+    command: "--cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats:6222"
+    networks:
+      - article_api_development
+    depends_on: 
+      - "nats01"
+
 
 volumes: 
   article_api:
   data01:
-      driver: local
   data02:
-      driver: local
   data03:
-      driver: local
 
 networks:
   article_api_development:

@@ -15,5 +15,8 @@
   },
   "elasticsearch": {
 	  "host": "http://es01:9200"
+  },
+  "nats": {
+	  "host": "nats://nats01:4222"
   }
 }

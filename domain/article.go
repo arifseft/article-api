@@ -25,3 +25,9 @@ type ArticleRepository interface {
 	Fetch(ctx context.Context, query string, author string) (res []Article, err error)
 	Store(ctx context.Context, a *Article) error
 }
+
+// ArticleEvent represent the article's event contract
+type ArticleEvent interface {
+	PublishArticleCreated(ctx context.Context, a Article) (err error)
+	SubscribeArticleCreated(ctx context.Context, f func(Article)) (err error)
+}
